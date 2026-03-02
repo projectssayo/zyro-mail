@@ -1,163 +1,151 @@
-import express from "express";
-import { MongoClient } from "mongodb";
-import nodemailer from "nodemailer";
+@app.get("/send_otp")
+def send_otp(email : str, mac_id : str):
+    try:
+        otp=random.randint(100_000,999_999)
 
-const app = express();
-app.use(express.json());
+        data = {"_id" : email,"otp" : otp,"mac_id" : mac_id,"sent_at" : datetime.datetime.now()}
 
-// =====================================================
-// 🔹 MONGODB CONNECTION
-// =====================================================
-const PORT = process.env.PORT || 7444;
+        otp_table.update_one(
+            {"_id": email},
+            {"$set": data},
+            upsert=True
+        )
+        print(data)
+        sender_email = "projects.sayo@gmail.com"
+        sender_password = "qwkt wfrd mmon soeg"
 
-const url =
-  "mongodb+srv://projectssayo_db_user:1234@test.mdv08ad.mongodb.net/?retryWrites=true&w=majority&appName=test";
+        html_message =f"""
 
-const client = new MongoClient(url, {
-  serverSelectionTimeoutMS: 3000,
-  connectTimeoutMS: 3000,
-  socketTimeoutMS: 3000,
-});
+<html>
+<body style="margin:0; padding:0; background-color:#f2f4f7; font-family: Arial, Helvetica, sans-serif;">
 
-await client.connect();
-console.log("MongoDB Connected ✅");
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f2f4f7; padding:20px 0;">
+<tr>
+<td align="center">
 
-// Databases
-const otp_db = client.db("otp_db");
-const user_db = client.db("users_db");
+<table width="100%" cellpadding="0" cellspacing="0"
+       style="max-width:600px; background:#ffffff; border-radius:10px; overflow:hidden;">
 
-// Collections
-const otp_table = otp_db.collection("verify_otp");
-const user_table = user_db.collection("user_info");
-const remember_me_table = user_db.collection("remember_me");
-const logged_in_table = user_db.collection("logged_in");
-
-// =====================================================
-// 🔹 GMAIL SMTP SETUP
-// =====================================================
-// ⚠️ Use Gmail App Password (NOT real password)
-
-const sender_email = "projects.sayo@gmail.com";
-const sender_password = "qwkt wfrd mmon soeg";
-
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: sender_email,
-    pass: sender_password,
-  },
-});
-
-// =====================================================
-// 🔹 SEND OTP ROUTE
-// =====================================================
-
-app.get("/send_otp", async (req, res) => {
-  try {
-    const { email, mac_id } = req.query;
-
-    if (!email || !mac_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and mac_id required",
-      });
-    }
-
-    // Generate 6 digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000);
-
-    const data = {
-      _id: email,
-      otp: otp,
-      mac_id: mac_id,
-      sent_at: new Date(),
-    };
-
-    // Upsert OTP
-    await otp_table.updateOne(
-      { _id: email },
-      { $set: data },
-      { upsert: true }
-    );
-
-    console.log("OTP Stored:", data);
-
-    // =====================================================
-    // 🔹 HTML EMAIL TEMPLATE
-    // =====================================================
-
-    const html_message = `
-    <html>
-    <body style="margin:0; padding:0; background-color:#f2f4f7; font-family: Arial, Helvetica, sans-serif;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f2f4f7; padding:20px 0;">
+    <!-- Top Banner -->
     <tr>
-    <td align="center">
-    <table width="100%" cellpadding="0" cellspacing="0"
-           style="max-width:600px; background:#ffffff; border-radius:10px; overflow:hidden;">
-
-        <tr>
-            <td style="padding:35px 25px; text-align:center;">
-                <h2 style="color:#2c3e50;">Verify Your Email Address</h2>
-                <p style="color:#555; font-size:14px;">
-                    Use the One-Time Password below to complete verification.
-                </p>
-
-                <div style="display:inline-block;
-                            background:#f0f4f8;
-                            padding:18px 35px;
-                            border-radius:8px;
-                            font-size:28px;
-                            font-weight:bold;
-                            letter-spacing:6px;
-                            color:#1f4e79;">
-                    ${otp}
-                </div>
-
-                <p style="margin-top:20px; font-size:13px; color:#777;">
-                    This OTP is valid for 5 minutes.
-                </p>
-            </td>
-        </tr>
-
-        <tr>
-            <td style="border-top:1px solid #e5e5e5; padding:15px; text-align:center; font-size:12px; color:#999;">
-                © 2026 sayoLabs. All rights reserved.
-            </td>
-        </tr>
-
-    </table>
-    </td>
+        <td align="center">
+            <img src="https://res.cloudinary.com/dnssyb7hu/image/upload/v1771342930/oik7ztbt79ykygpaoewx.png"
+                 width="100%"
+                 style="display:block; max-width:600px; height:auto;">
+        </td>
     </tr>
-    </table>
-    </body>
-    </html>
-    `;
 
-    // Send Email
-    await transporter.sendMail({
-      from: sender_email,
-      to: email,
-      subject: "Your OTP Code",
-      html: html_message,
-    });
+    <!-- Main Content -->
+    <tr>
+        <td style="padding:35px 25px; text-align:center;">
 
-    return res.json({
-      success: true,
-      message: "OTP sent successfully",
-    });
-  } catch (error) {
-    console.error("Error:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+            <h2 style="color:#2c3e50; margin:0 0 15px 0;">
+                Verify Your Email Address
+            </h2>
 
-// =====================================================
-// 🔹 START SERVER
-// =====================================================
+            <p style="color:#555555; font-size:14px; margin:0 0 25px 0;">
+                Use the One-Time Password below to complete verification.
+            </p>
 
-app.listen(PORT, () => {
-  console.log("Server running on port 7444 🚀");
-});
+            <div style="display:inline-block;
+                        background:#f0f4f8;
+                        padding:18px 35px;
+                        border-radius:8px;
+                        font-size:28px;
+                        font-weight:bold;
+                        letter-spacing:6px;
+                        color:#1f4e79;">
+                {otp}
+            </div>
+
+            <p style="margin:25px 0 0 0; font-size:13px; color:#777777;">
+                This OTP is valid for 5 minutes.
+            </p>
+
+            <p style="margin:15px 0 0 0; font-size:12px; color:#999999;">
+                If you didn’t request this, you can safely ignore this email.
+            </p>
+
+        </td>
+    </tr>
+
+    <!-- Divider -->
+    <tr>
+        <td style="border-top:1px solid #e5e5e5;"></td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+        <td style="padding:20px;">
+
+            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+
+                    <!-- Logo -->
+                    <td width="30%" align="left" style="vertical-align:top;">
+                        <img src="https://res.cloudinary.com/dnssyb7hu/image/upload/v1771343726/ev1pgoriwsaixlkmhr1i.png"
+                             width="110"
+                             style="display:block; max-width:110px; height:auto;">
+                    </td>
+
+                    <!-- Footer Text (Tight Spacing) -->
+                    <td width="70%" align="right"
+                        style="vertical-align:top; font-size:11px; line-height:14px; color:#8a8a8a;">
+
+                        <div style="margin:0;">
+                            Please do not reply directly to this email.
+                        </div>
+
+                        <div style="margin:0;">
+                            © 2026 sayoLabs. All rights reserved.
+                        </div>
+
+                        <div style="margin:0;">
+                            <a href="https://projectssayo.github.io/a/"
+                               style="color:#8a8a8a; text-decoration:none;">
+                               Contact Us
+                            </a> |
+                            <a href="https://projectssayo.github.io/b/"
+                               style="color:#8a8a8a; text-decoration:none;">
+                               Terms
+                            </a> |
+                            <a href="https://projectssayo.github.io/b/"
+                               style="color:#8a8a8a; text-decoration:none;">
+                               Privacy
+                            </a>
+                        </div>
+
+                    </td>
+
+                </tr>
+            </table>
+
+        </td>
+    </tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
+
+"""
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Your OTP Code"
+        msg["From"] = sender_email
+        msg["To"] = email
+        msg.attach(MIMEText(html_message, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email,sender_password)
+            server.send_message(msg)
+
+        return {"message": "OTP sent successfully", "success" : True}
+    except ServerSelectionTimeoutError:
+        return {"success": False, "message": "Server selection timeout, internet nahi hai gareeb bc"}
+    except Exception as e:
+        return {"message": str(e), "success": False}
